@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Xstamina — Body Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f4f2;--s1:#ffffff;--s2:#f0eeeb;--s3:#e8e5e0;--bd:#ddd9d3;--bd2:#c8c3bc;--red:#e8320a;--tx:#1a1a1a;--mu:#777;--mu2:#aaa;--green:#16a34a;--top:52px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--tx);font-family:"DM Sans",sans-serif;font-size:15px;line-height:1.5;overflow-x:hidden}
+
+/* TOPBAR */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--top);background:#ffffff;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+#topbar img{height:30px}
+#t-label{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:1px;line-height:1.1}
+#t-client{font-family:"Bebas Neue";font-size:22px;color:var(--red);line-height:1}
+
+/* TABS */
+#tabs{position:fixed;top:var(--top);left:0;right:0;z-index:199;display:flex;background:#ffffff;border-bottom:2px solid var(--bd)}
+.tab{flex:1;padding:11px 0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--mu);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:"DM Sans",sans-serif}
+.tab.on{color:var(--red);border-bottom-color:var(--red);background:#fff8f6}
+
+/* PAGES */
+.page{display:none}.page.on{display:block}
+.wrap{max-width:680px;margin:0 auto;padding:16px 14px 140px}
+
+/* SECTIONS */
+.st{font-family:"Bebas Neue";font-size:12px;letter-spacing:3px;color:var(--red);text-transform:uppercase;margin:22px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:8px}
+
+/* GRID LAYOUTS */
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;align-items:start}
+.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;align-items:start}
+.r1{margin-bottom:10px}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:3px}
+label.lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--mu);font-weight:600}
+.hint{font-size:10px;color:var(--mu2)}
+input,select,textarea{background:var(--s2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-family:"DM Sans",sans-serif;font-size:15px;padding:10px 12px;width:100%;-webkit-appearance:none;appearance:none;box-sizing:border-box}
+input[type=text],input[type=number],input[type=date],select{height:46px;padding:0 12px;line-height:46px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red)}
+input::placeholder,textarea::placeholder{color:var(--mu2)}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]{-moz-appearance:textfield}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px}
+select option{background:#ffffff;color:#1a1a1a}
+textarea{resize:vertical;min-height:80px}
+input.err,select.err{border-color:#ef4444!important}
+
+/* NOTE BOX */
+.note{background:#fff4f1;border:1px solid rgba(232,50,10,.22);border-radius:6px;padding:8px 12px;font-size:12px;color:#555;margin-bottom:10px;line-height:1.5}
+.note strong{color:var(--tx)}
+
+/* NAME DROPDOWN */
+.name-wrap{position:relative}
+#name-dd{display:none;position:absolute;left:0;right:0;top:100%;z-index:500;background:var(--s2);border:1px solid var(--bd2);border-radius:6px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.6);max-height:200px;overflow-y:auto}
+.dd-item{padding:10px 14px;cursor:pointer;font-size:14px;color:var(--tx);border-bottom:1px solid var(--bd)}
+.dd-item:active{background:var(--s3)}
+
+/* MAIN BUTTON */
+#savebtn{width:100%;padding:16px;margin-top:12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-family:"Bebas Neue";font-size:22px;letter-spacing:3px;cursor:pointer}
+#savebtn:active{opacity:.85}
+
+/* BOTTOM BAR */
+#bottombar{position:fixed;bottom:0;left:0;right:0;z-index:200;background:#ffffff;border-top:2px solid var(--bd);padding:9px 14px max(10px,env(safe-area-inset-bottom));box-shadow:0 -2px 12px rgba(0,0,0,.07)}
+.bb{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.bb-client{font-family:"Bebas Neue";font-size:20px;color:var(--red);line-height:1;min-width:60px}
+.bb-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--mu);text-align:center}
+.bb-mid{flex:1;min-width:0}
+.bb-note{font-size:10px;color:var(--mu);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bb-minis{display:flex;gap:4px;flex-shrink:0}
+.sm{background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:3px 6px;text-align:center;min-width:44px}
+.sm-v{font-family:"DM Mono";font-size:11px}
+.sm-l{font-size:8px;text-transform:uppercase;color:#999}
+
+/* DELTA BADGES */
+.pos{color:var(--green);font-size:12px}
+.neg{color:var(--red);font-size:12px}
+.neu{color:var(--mu);font-size:12px}
+
+/* HISTORY */
+.hist-empty{padding:30px;text-align:center;color:var(--mu);font-size:13px}
+.hclient{margin-bottom:14px}
+.hname{font-family:"Bebas Neue";font-size:15px;letter-spacing:2px;padding:9px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:6px 6px 0 0;border-bottom:none;display:flex;justify-content:space-between;align-items:center}
+
+/* COMPARISON TABLE */
+.comp-table{width:100%;border-collapse:collapse;font-size:13px}
+.comp-table th{text-align:left;padding:7px 10px;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--bd);font-weight:600;background:var(--s2)}
+.comp-table td{padding:9px 10px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.comp-table tr:last-child td{border-bottom:none}
+.comp-table tr:hover td{background:#fff4f1}
+.comp-label{font-weight:500;color:var(--tx);font-size:12px}
+.comp-unit{color:var(--mu);font-size:10px;margin-left:2px}
+.comp-val{font-family:"DM Mono";font-size:13px;color:var(--tx)}
+.comp-prev{font-family:"DM Mono";font-size:12px;color:var(--mu)}
+
+/* SESSION LIST */
+.sess-row{background:var(--s1);border:1px solid var(--bd);border-radius:6px;margin-bottom:6px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.sess-row:hover{background:#fff8f6}
+.sess-date{font-family:"Bebas Neue";font-size:17px;letter-spacing:1px;color:var(--tx)}
+.sess-stats{font-size:11px;color:var(--mu);font-family:"DM Mono"}
+.sess-del{background:none;border:1px solid var(--bd);border-radius:4px;color:var(--mu);font-size:11px;padding:3px 8px;cursor:pointer;font-family:"DM Sans",sans-serif;flex-shrink:0}
+.sess-del:hover{border-color:var(--red);color:var(--red)}
+
+/* CHARTS */
+.chart-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.cpill{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--bd2);color:var(--mu);cursor:pointer;background:none;font-family:"DM Sans",sans-serif;font-weight:600}
+.cpill.on{background:rgba(232,50,10,.1);border-color:var(--red);color:var(--red)}
+
+/* SETUP */
+.setup-input{background:var(--s2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-family:"DM Mono",monospace;font-size:12px;padding:10px 12px;width:100%;outline:none}
+.setup-input:focus{border-color:var(--red)}
+.setup-row{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+.setup-row label{font-size:11px;color:var(--mu);white-space:nowrap;min-width:80px}
+.setup-save{background:var(--red);border:none;border-radius:6px;color:#fff;font-family:"Bebas Neue";font-size:16px;letter-spacing:2px;padding:10px 20px;cursor:pointer}
+
+/* TOAST */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(30px);background:var(--tx);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{background:#16a34a}
+#toast.err{background:#dc2626}
+
+/* VALIDATION */
+#val-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:10px 14px;margin-bottom:10px;display:none}
+#val-box.show{display:block}
+.vt{font-size:12px;font-weight:600;color:#f87171;margin-bottom:4px}
+
+/* SECTION DETAIL (storico expanded) */
+.detail-section{border-top:1px solid var(--bd);margin-top:10px;padding-top:10px}
+.detail-title{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--red);font-weight:600;margin-bottom:8px}
+
+@media(max-width:480px){.r3{grid-template-columns:1fr 1fr}.bb-minis{display:none}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAACAvzbMAAA0EElEQVR4nO3deXxU1fk/8M8zd5KQhJCQABZRUVxbl7rU5aetrW3d6oIKBdx3rYq4gCAIssiqgiBUARFUUNzR2rpbtVVbq9VqF637Uv2qkH1PZub5/XHumQxqrRyTzNyTz/v14tUSEZOZO/dzz3nOeY6oKoiIiDZWLNvfABERRRMDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicxLP9DXgrkW1/A19NJNvfAfkqfc0rkL78s/05ECDGp+SuIpqrNzrqOqocv6AAQAT7X0T/ywbXEMxNmtdOj8MAuYja1kDaW4Gi3kAiAWS7GIsFQF4ekJf/9R90VyCVCv8d3hQog702BOZ6+qL2dqChHmisBxqbFK3N5mupxP/4i8X8vd/2XhRkjjTEfH2lZcD2O/EiJiKiDIo2WuB4WqfSTi9YVp8y+tWwckCsRqt1J7rW9v6AIr5JBWbhAJfSN3pN6qEH6dSqVbmb5LG7cTG2bh+pV1OJ3oU2Ag5Y84dBjvFSB5AAAA" alt="X">
+  <div style="display:flex;align-items:baseline;gap:6px">
+    <div id="t-label">Nessun cliente</div>
+    <div id="t-client"></div>
+  </div>
+</div>
+
+<div style="padding-top:calc(var(--top) + 42px)">
+<div id="tabs">
+  <button class="tab on" id="t-ins" onclick="showTab('ins')">📝 Nuova</button>
+  <button class="tab" id="t-sto" onclick="showTab('sto')">📊 Storico</button>
+  <button class="tab" id="t-grf" onclick="showTab('grf')">📈 Grafici</button>
+  <button class="tab" id="t-set" onclick="showTab('set')">⚙️ Setup</button>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB: NUOVA SESSIONE                         -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="page on" id="page-ins"><div class="wrap">
+
+<div class="st">Dati Cliente</div>
+<div class="card">
+  <div class="r2">
+    <div class="field name-wrap">
+      <label class="lbl">Nome e Cognome *</label>
+      <input id="f-name" type="text" placeholder="Giulia Rossi" oninput="onNameInput()" autocomplete="off">
+      <div id="name-dd"></div>
+    </div>
+    <div class="field">
+      <label class="lbl">Data sessione</label>
+      <input id="f-date" type="date">
+    </div>
+  </div>
+  <div class="r1">
+    <div class="field">
+      <label class="lbl">Note trainer (facoltativo)</label>
+      <input type="text" id="f-note" placeholder="es. post ciclo, settimana di stress, ritmo regolare...">
+    </div>
+  </div>
+</div>
+
+<div class="st">Bioimpedenziometria — BIA</div>
+<div class="card">
+  <div class="note">Tutti i campi sono facoltativi — inserisci solo i valori rilevati dalla bilancia. Nessun campo è obbligatorio.</div>
+  <div class="r3">
+    <div class="field"><label class="lbl">Peso (kg)</label><input type="number" id="f-peso" step=".1" placeholder="65.0"></div>
+    <div class="field"><label class="lbl">BMI</label><input type="number" id="f-bmi" step=".1" placeholder="23.1"></div>
+    <div class="field"><label class="lbl">Massa grassa %</label><input type="number" id="f-mg-pct" step=".1" placeholder="24.5"></div>
+  </div>
+  <div class="r3">
+    <div class="field"><label class="lbl">Massa magra %</label><input type="number" id="f-mm-pct" step=".1" placeholder="75.5"></div>
+    <div class="field"><label class="lbl">Grasso viscerale</label><input type="number" id="f-visc" step=".5" placeholder="8"></div>
+    <div class="field"><label class="lbl">Grasso viscerale RM <span style="font-size:9px;font-weight:400">(kcal)</span></label><input type="number" id="f-visc-rm" step="1" placeholder="1420"></div>
+  </div>
+</div>
+
+<div class="st">Circonferenze (cm)</div>
+<div class="card">
+  <div class="note">Tutti i campi sono facoltativi. Misurare sempre nello stesso punto e con la stessa postura.</div>
+  <div class="r3">
+    <div class="field"><label class="lbl">Braccio dx</label><input type="number" id="f-braccio-dx" step=".5" placeholder="30"></div>
+    <div class="field"><label class="lbl">Braccio sx</label><input type="number" id="f-braccio-sx" step=".5" placeholder="30"></div>
+    <div class="field"><label class="lbl">Torace</label><input type="number" id="f-torace" step=".5" placeholder="88"></div>
+  </div>
+  <div class="r3">
+    <div class="field"><label class="lbl">Ombelico</label><input type="number" id="f-ombelico" step=".5" placeholder="80"></div>
+    <div class="field"><label class="lbl">Vita</label><input type="number" id="f-vita" step=".5" placeholder="72"></div>
+    <div class="field"><label class="lbl">Giro coscia dx</label><input type="number" id="f-giro-coscia-dx" step=".5" placeholder="58"></div>
+  </div>
+  <div class="r3">
+    <div class="field"><label class="lbl">Coscia media dx</label><input type="number" id="f-coscia-media-dx" step=".5" placeholder="52"></div>
+    <div class="field"><label class="lbl">Giro coscia sx</label><input type="number" id="f-giro-coscia-sx" step=".5" placeholder="58"></div>
+    <div class="field"><label class="lbl">Coscia media sx</label><input type="number" id="f-coscia-media-sx" step=".5" placeholder="52"></div>
+  </div>
+</div>
+
+<div id="val-box"><div class="vt">⚠ Campi mancanti o errati</div><ul id="val-list"></ul></div>
+<button id="savebtn" onclick="saveSession()">💾 SALVA SESSIONE</button>
+
+</div></div><!-- /ins -->
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB: STORICO                                -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="page" id="page-sto"><div class="wrap">
+
+<div class="st">Seleziona Cliente</div>
+<div class="card">
+  <div class="r2">
+    <div class="field name-wrap">
+      <label class="lbl">Nome e Cognome</label>
+      <input id="s-name" type="text" placeholder="Giulia Rossi" oninput="onStoNameInput()" autocomplete="off">
+      <div id="sto-name-dd"></div>
+    </div>
+    <div class="field" style="justify-content:flex-end">
+      <label class="lbl">&nbsp;</label>
+      <button onclick="loadHistory()" style="height:46px;background:var(--red);border:none;border-radius:6px;color:#fff;font-family:'Bebas Neue';font-size:16px;letter-spacing:2px;cursor:pointer;padding:0 16px">CARICA</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFRONTO PRIMA / ULTIMA -->
+<div id="confronto-wrap" style="display:none">
+  <div class="st">Confronto Prima → Ultima Sessione</div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="comp-table" id="confronto-table"></table>
+  </div>
+</div>
+
+<!-- LISTA SESSIONI -->
+<div id="sessions-wrap" style="display:none">
+  <div class="st">Tutte le Sessioni</div>
+  <div id="sessions-list"></div>
+</div>
+
+<div id="sto-empty" class="hist-empty" style="display:none">Nessuna sessione trovata per questo cliente.</div>
+
+</div></div><!-- /sto -->
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB: GRAFICI                                -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="page" id="page-grf"><div class="wrap">
+
+<div class="st">Seleziona Metrica</div>
+<div class="card">
+  <div class="chart-tabs" id="chart-pills"></div>
+  <canvas id="chart-canvas" style="width:100%;height:220px;display:block"></canvas>
+  <div id="chart-empty" style="display:none;padding:30px;text-align:center;color:var(--mu);font-size:13px">Carica lo storico di un cliente dallo tab Storico</div>
+</div>
+
+<div id="chart-stats" style="display:none">
+  <div class="st">Statistiche</div>
+  <div class="card">
+    <div class="r3" id="chart-stat-grid"></div>
+  </div>
+</div>
+
+</div></div><!-- /grf -->
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB: SETUP                                  -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="page" id="page-set"><div class="wrap">
+
+<div class="st">Connessione Google Sheets</div>
+<div class="card">
+  <div class="note"><strong>Come configurare:</strong> Crea un nuovo Google Sheets → Estensioni → Apps Script → incolla lo script → Distribuisci come web app → copia l'URL qui sotto.</div>
+  <div class="setup-row">
+    <label>Script URL</label>
+    <input type="url" class="setup-input" id="setup-url" placeholder="https://script.google.com/macros/s/...">
+  </div>
+  <button class="setup-save" onclick="saveSetup()">SALVA</button>
+</div>
+
+<div class="st">Gestione Dati</div>
+<div class="card">
+  <p style="font-size:13px;color:var(--mu);margin-bottom:12px">I dati vengono salvati su Google Sheets tramite Apps Script. L'URL dello script viene memorizzato localmente nel browser.</p>
+  <div style="display:flex;gap:8px">
+    <button onclick="clearLocalUrl()" style="border:1px solid var(--bd);border-radius:6px;background:none;padding:8px 14px;font-size:12px;color:var(--mu);cursor:pointer">Rimuovi URL salvato</button>
+    <button onclick="testConnection()" style="border:1px solid var(--bd);border-radius:6px;background:none;padding:8px 14px;font-size:12px;color:var(--mu);cursor:pointer">Testa connessione</button>
+  </div>
+</div>
+
+<div class="st">Guida Apps Script</div>
+<div class="card" style="padding:0">
+  <div style="padding:14px;border-bottom:1px solid var(--bd)">
+    <div style="font-family:'Bebas Neue';font-size:13px;letter-spacing:2px;color:#e8320a;margin-bottom:8px">1 — CREA IL FOGLIO</div>
+    <div style="font-size:12px;color:var(--mu);line-height:1.8">Vai su <strong style="color:var(--tx)">sheets.google.com</strong> → Crea nuovo foglio → Rinominalo "Xstamina Body Monitor"</div>
+  </div>
+  <div style="padding:14px;border-bottom:1px solid var(--bd)">
+    <div style="font-family:'Bebas Neue';font-size:13px;letter-spacing:2px;color:#e8320a;margin-bottom:8px">2 — AGGIUNGI LO SCRIPT</div>
+    <div style="font-size:12px;color:var(--mu);line-height:1.8">Estensioni → Apps Script → Incolla il codice fornito → Salva (Ctrl+S)</div>
+  </div>
+  <div style="padding:14px;border-bottom:1px solid var(--bd)">
+    <div style="font-family:'Bebas Neue';font-size:13px;letter-spacing:2px;color:#e8320a;margin-bottom:8px">3 — DISTRIBUISCI</div>
+    <div style="font-size:12px;color:var(--mu);line-height:1.8">Distribuisci → Nuova distribuzione → Tipo: "App web" → Chi ha accesso: "Chiunque" → Distribuisci → Copia URL</div>
+  </div>
+  <div style="padding:14px">
+    <div style="font-family:'Bebas Neue';font-size:13px;letter-spacing:2px;color:#e8320a;margin-bottom:8px">4 — INCOLLA L'URL QUI</div>
+    <div style="font-size:12px;color:var(--mu);line-height:1.8">Incolla l'URL nel campo "Script URL" in cima a questa pagina → Salva</div>
+  </div>
+</div>
+
+</div></div><!-- /set -->
+</div><!-- /padding-top -->
+
+<!-- BOTTOMBAR -->
+<div id="bottombar">
+  <div class="bb">
+    <div>
+      <div class="bb-label">Cliente attivo</div>
+      <div class="bb-client" id="bb-client">—</div>
+    </div>
+    <div class="bb-mid">
+      <div class="bb-note" id="bb-note">Nessuna sessione caricata</div>
+    </div>
+    <div class="bb-minis" id="bb-minis"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONFIG & STATE
+// ══════════════════════════════════════════════
+const URL_KEY = 'xbm_script_url';
+let scriptUrl = localStorage.getItem(URL_KEY) || '';
+let currentClient = '';
+let clientSessions = [];   // array of session objects sorted by date asc
+let activeChart = 'peso';
+
+const BIA = [
+  { id:'f-peso',     key:'peso',     label:'Peso',          unit:'kg',   better:'context' },
+  { id:'f-bmi',      key:'bmi',      label:'BMI',           unit:'',     better:'down' },
+  { id:'f-mg-pct',   key:'mg_pct',   label:'Massa Grassa',  unit:'%',    better:'down' },
+  { id:'f-mm-pct',   key:'mm_pct',   label:'Massa Magra',   unit:'%',    better:'up' },
+  { id:'f-visc',     key:'visc',     label:'Gr. Viscerale', unit:'',     better:'down' },
+  { id:'f-visc-rm',  key:'visc_rm',  label:'Visc. RM',      unit:'kcal', better:'up' },
+];
+const CIRC = [
+  { id:'f-braccio-dx',      key:'braccio_dx',      label:'Braccio Dx',      unit:'cm', better:'context' },
+  { id:'f-braccio-sx',      key:'braccio_sx',      label:'Braccio Sx',      unit:'cm', better:'context' },
+  { id:'f-torace',          key:'torace',           label:'Torace',          unit:'cm', better:'context' },
+  { id:'f-ombelico',        key:'ombelico',         label:'Ombelico',        unit:'cm', better:'down' },
+  { id:'f-vita',            key:'vita',             label:'Vita',            unit:'cm', better:'down' },
+  { id:'f-giro-coscia-dx',  key:'giro_coscia_dx',   label:'Giro Coscia Dx',  unit:'cm', better:'down' },
+  { id:'f-coscia-media-dx', key:'coscia_media_dx',  label:'Coscia Media Dx', unit:'cm', better:'context' },
+  { id:'f-giro-coscia-sx',  key:'giro_coscia_sx',   label:'Giro Coscia Sx',  unit:'cm', better:'down' },
+  { id:'f-coscia-media-sx', key:'coscia_media_sx',  label:'Coscia Media Sx', unit:'cm', better:'context' },
+];
+const ALL = [...BIA, ...CIRC];
+
+const CHART_OPTIONS = [
+  {key:'peso',label:'Peso'},{key:'mg_pct',label:'Grassa %'},{key:'mm_pct',label:'Magra %'},
+  {key:'bmi',label:'BMI'},{key:'visc',label:'Viscerale'},{key:'vita',label:'Vita'},
+  {key:'ombelico',label:'Ombelico'},{key:'torace',label:'Torace'},{key:'braccio_dx',label:'Braccio Dx'},
+];
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // today
+  const t = new Date();
+  document.getElementById('f-date').value = t.toISOString().split('T')[0];
+  // url
+  if (scriptUrl) document.getElementById('setup-url').value = scriptUrl;
+  // chart pills
+  buildChartPills();
+  // show empty chart
+  document.getElementById('chart-empty').style.display = 'block';
+});
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+function showTab(name) {
+  ['ins','sto','grf','set'].forEach(t => {
+    document.getElementById('page-'+t).classList.remove('on');
+    document.getElementById('t-'+t).classList.remove('on');
+  });
+  document.getElementById('page-'+name).classList.add('on');
+  document.getElementById('t-'+name).classList.add('on');
+  if (name === 'grf' && clientSessions.length > 0) renderChart();
+}
+
+// ══════════════════════════════════════════════
+// NAME AUTOCOMPLETE (Nuova sessione)
+// ══════════════════════════════════════════════
+function getKnownClients() {
+  try { return JSON.parse(localStorage.getItem('xbm_clients') || '[]'); } catch{ return []; }
+}
+
+function addKnownClient(name) {
+  const list = getKnownClients();
+  if (!list.includes(name)) { list.push(name); localStorage.setItem('xbm_clients', JSON.stringify(list)); }
+}
+
+function onNameInput() {
+  const val = document.getElementById('f-name').value.trim().toLowerCase();
+  const dd = document.getElementById('name-dd');
+  const matches = getKnownClients().filter(c => c.toLowerCase().includes(val) && val.length > 0);
+  if (matches.length === 0) { dd.style.display='none'; return; }
+  dd.innerHTML = matches.map(c => `<div class="dd-item" onclick="selectName('${c}')">${c}</div>`).join('');
+  dd.style.display = 'block';
+}
+
+function selectName(name) {
+  document.getElementById('f-name').value = name;
+  document.getElementById('name-dd').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.name-wrap')) document.getElementById('name-dd').style.display='none';
+  if (!e.target.closest('#sto-name-dd') && !e.target.closest('#s-name')) document.getElementById('sto-name-dd').style.display='none';
+});
+
+function onStoNameInput() {
+  const val = document.getElementById('s-name').value.trim().toLowerCase();
+  const dd = document.getElementById('sto-name-dd');
+  const matches = getKnownClients().filter(c => c.toLowerCase().includes(val) && val.length > 0);
+  if (matches.length === 0) { dd.style.display='none'; return; }
+  dd.innerHTML = matches.map(c => `<div class="dd-item" onclick="selectStoName('${c}')">${c}</div>`).join('');
+  dd.style.display = 'block';
+}
+
+function selectStoName(name) {
+  document.getElementById('s-name').value = name;
+  document.getElementById('sto-name-dd').style.display = 'none';
+}
+
+// ══════════════════════════════════════════════
+// SAVE SESSION
+// ══════════════════════════════════════════════
+async function saveSession() {
+  const name = document.getElementById('f-name').value.trim();
+  const dateVal = document.getElementById('f-date').value;
+
+  const errors = [];
+  if (!name) errors.push('Nome cliente obbligatorio');
+  if (!dateVal) errors.push('Data sessione obbligatoria');
+  if (!scriptUrl) errors.push('Configura prima l\'URL script nel tab Setup');
+
+  const vbox = document.getElementById('val-box');
+  const vlist = document.getElementById('val-list');
+  if (errors.length) {
+    vbox.classList.add('show');
+    vlist.innerHTML = errors.map(e=>`<li style="font-size:12px;color:#f87171">${e}</li>`).join('');
+    return;
+  }
+  vbox.classList.remove('show');
+
+  const row = { cliente: name, data: isoToIT(dateVal), note: document.getElementById('f-note').value.trim() };
+  ALL.forEach(f => {
+    const v = document.getElementById(f.id).value;
+    row[f.key] = v !== '' ? parseFloat(v) : '';
+  });
+
+  const btn = document.getElementById('savebtn');
+  btn.textContent = 'Salvataggio...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'save', data: row }),
+    });
+    const json = await res.json();
+    if (json.status === 'ok') {
+      toast('Sessione salvata ✓', 'ok');
+      addKnownClient(name);
+      currentClient = name;
+      updateTopbar();
+      clearForm(name);
+    } else {
+      toast('Errore: ' + (json.message||'?'), 'err');
+    }
+  } catch(e) {
+    toast('Errore di connessione', 'err');
+  }
+  btn.textContent = '💾 SALVA SESSIONE';
+  btn.disabled = false;
+}
+
+function clearForm(keepName) {
+  ALL.forEach(f => document.getElementById(f.id).value = '');
+  document.getElementById('f-note').value = '';
+  const t = new Date();
+  document.getElementById('f-date').value = t.toISOString().split('T')[0];
+  if (keepName) document.getElementById('f-name').value = keepName;
+}
+
+// ══════════════════════════════════════════════
+// LOAD HISTORY
+// ══════════════════════════════════════════════
+async function loadHistory() {
+  const name = document.getElementById('s-name').value.trim();
+  if (!name) { toast('Inserisci il nome del cliente', 'err'); return; }
+  if (!scriptUrl) { toast('Configura prima l\'URL script nel tab Setup', 'err'); return; }
+
+  toast('Caricamento...', '');
+
+  try {
+    const res = await fetch(scriptUrl + '?action=get&cliente=' + encodeURIComponent(name));
+    const json = await res.json();
+    if (json.status !== 'ok') { toast('Errore: '+(json.message||'?'),'err'); return; }
+
+    clientSessions = (json.data || []).sort((a,b) => parseITDate(a.data) - parseITDate(b.data));
+    currentClient = name;
+    addKnownClient(name);
+    updateTopbar();
+    renderStorico();
+    toast(`${clientSessions.length} sessioni caricate ✓`, 'ok');
+  } catch(e) {
+    toast('Errore di connessione', 'err');
+  }
+}
+
+// ══════════════════════════════════════════════
+// RENDER STORICO
+// ══════════════════════════════════════════════
+function renderStorico() {
+  const wConf = document.getElementById('confronto-wrap');
+  const wSess = document.getElementById('sessions-wrap');
+  const wEmpty = document.getElementById('sto-empty');
+
+  if (clientSessions.length === 0) {
+    wConf.style.display = 'none';
+    wSess.style.display = 'none';
+    wEmpty.style.display = 'block';
+    return;
+  }
+  wEmpty.style.display = 'none';
+  wConf.style.display = 'block';
+  wSess.style.display = 'block';
+
+  renderConfronto();
+  renderSessionsList();
+  renderBottomBar();
+}
+
+function renderConfronto() {
+  const first = clientSessions[0];
+  const last = clientSessions[clientSessions.length - 1];
+  const table = document.getElementById('confronto-table');
+
+  let html = `<thead><tr>
+    <th>Metrica</th>
+    <th>${first.data}</th>
+    <th>${last.data}</th>
+    <th>Δ totale</th>
+  </tr></thead><tbody>`;
+
+  ALL.forEach(f => {
+    const fv = parseFloat(first[f.key]);
+    const lv = parseFloat(last[f.key]);
+    if (isNaN(fv) && isNaN(lv)) return;
+
+    let delta = '';
+    if (!isNaN(fv) && !isNaN(lv)) {
+      const d = lv - fv;
+      const sign = d >= 0 ? '+' : '';
+      let cls = 'neu';
+      if (f.better === 'down') cls = d < 0 ? 'pos' : d > 0 ? 'neg' : 'neu';
+      if (f.better === 'up')   cls = d > 0 ? 'pos' : d < 0 ? 'neg' : 'neu';
+      delta = `<span class="${cls}">${sign}${d.toFixed(1)} ${f.unit}</span>`;
+    }
+
+    html += `<tr>
+      <td><span class="comp-label">${f.label}</span><span class="comp-unit">${f.unit}</span></td>
+      <td class="comp-prev">${isNaN(fv)?'—':fv.toFixed(1)}</td>
+      <td class="comp-val">${isNaN(lv)?'—':lv.toFixed(1)}</td>
+      <td>${delta || '—'}</td>
+    </tr>`;
+  });
+
+  table.innerHTML = html + '</tbody>';
+}
+
+function renderSessionsList() {
+  const container = document.getElementById('sessions-list');
+  const reversed = [...clientSessions].reverse();
+
+  container.innerHTML = reversed.map((s, i) => {
+    const prev = i < reversed.length - 1 ? reversed[i+1] : null;
+    const peso = parseFloat(s.peso);
+    const mg = parseFloat(s.mg_pct);
+    const vita = parseFloat(s.vita);
+
+    let info = [];
+    if (!isNaN(peso)) info.push(peso.toFixed(1)+' kg');
+    if (!isNaN(mg)) info.push('GR '+mg.toFixed(1)+'%');
+    if (!isNaN(vita)) info.push('Vita '+vita.toFixed(0)+'cm');
+
+    return `<div class="sess-row" onclick="expandSession(${reversed.length - 1 - i})">
+      <div>
+        <div class="sess-date">${s.data}</div>
+        <div class="sess-stats">${info.join('  ·  ') || 'Dati non disponibili'}</div>
+        ${s.note ? `<div style="font-size:10px;color:var(--mu);margin-top:2px">📝 ${s.note}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function expandSession(idx) {
+  // future: show detail modal
+}
+
+function renderBottomBar() {
+  document.getElementById('bb-client').textContent = currentClient;
+  const last = clientSessions[clientSessions.length-1];
+  const first = clientSessions[0];
+  const peso = parseFloat(last?.peso);
+  const mg = parseFloat(last?.mg_pct);
+  document.getElementById('bb-note').textContent = `${clientSessions.length} sessioni · ultima: ${last?.data}`;
+
+  const minis = document.getElementById('bb-minis');
+  let html = '';
+  if (!isNaN(peso)) html += mini(peso.toFixed(1)+' kg', 'Peso');
+  if (!isNaN(mg)) html += mini(mg.toFixed(1)+'%', 'Gr%');
+  const vita = parseFloat(last?.vita);
+  if (!isNaN(vita)) html += mini(vita.toFixed(0)+' cm', 'Vita');
+  minis.innerHTML = html;
+}
+
+function mini(val, label) {
+  return `<div class="sm"><div class="sm-v">${val}</div><div class="sm-l">${label}</div></div>`;
+}
+
+// ══════════════════════════════════════════════
+// CHART
+// ══════════════════════════════════════════════
+function buildChartPills() {
+  const c = document.getElementById('chart-pills');
+  c.innerHTML = CHART_OPTIONS.map(o =>
+    `<button class="cpill ${o.key===activeChart?'on':''}" onclick="selectChart('${o.key}',this)">${o.label}</button>`
+  ).join('');
+}
+
+function selectChart(key, el) {
+  activeChart = key;
+  document.querySelectorAll('.cpill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  renderChart();
+}
+
+function renderChart() {
+  const canvas = document.getElementById('chart-canvas');
+  const empty = document.getElementById('chart-empty');
+  const ctx = canvas.getContext('2d');
+
+  if (clientSessions.length === 0) {
+    empty.style.display = 'block';
+    canvas.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  canvas.style.display = 'block';
+
+  const points = clientSessions
+    .map(s => ({ date: s.data, v: parseFloat(s[activeChart]) }))
+    .filter(p => !isNaN(p.v));
+
+  const w = canvas.offsetWidth * window.devicePixelRatio;
+  const h = 220 * window.devicePixelRatio;
+  canvas.width = w; canvas.height = h;
+  canvas.style.height = '220px';
+
+  const scale = window.devicePixelRatio;
+  ctx.scale(scale, scale);
+  const W = canvas.offsetWidth, H = 220;
+
+  if (points.length === 0) {
+    ctx.fillStyle = '#aaa';
+    ctx.font = '12px DM Sans';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nessun dato per questa metrica', W/2, H/2);
+    return;
+  }
+
+  const pad = { top:24, right:16, bottom:36, left:52 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  const vals = points.map(p=>p.v);
+  const minV = Math.min(...vals);
+  const maxV = Math.max(...vals);
+  const range = maxV - minV || 1;
+  const getX = i => pad.left + (i / Math.max(points.length-1,1)) * cw;
+  const getY = v => pad.top + (1-(v-minV)/range) * ch;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Grid
+  for (let i=0;i<=4;i++) {
+    const y = pad.top + (i/4)*ch;
+    ctx.strokeStyle = '#ddd9d3';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cw,y); ctx.stroke();
+    const v = maxV - (i/4)*range;
+    ctx.fillStyle = '#aaa';
+    ctx.font = '9px DM Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(v.toFixed(1), pad.left-6, y+3);
+  }
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0,pad.top,0,pad.top+ch);
+  grad.addColorStop(0,'rgba(232,50,10,0.18)');
+  grad.addColorStop(1,'rgba(232,50,10,0)');
+  ctx.beginPath();
+  points.forEach((p,i) => { const x=getX(i),y=getY(p.v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.lineTo(getX(points.length-1),pad.top+ch);
+  ctx.lineTo(getX(0),pad.top+ch);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = '#e8320a';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  points.forEach((p,i) => { const x=getX(i),y=getY(p.v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.stroke();
+
+  // Dots + labels
+  points.forEach((p,i) => {
+    const x=getX(i), y=getY(p.v);
+    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fillStyle='#e8320a'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+
+    if (i===0 || i===points.length-1 || points.length <= 6) {
+      ctx.fillStyle='#aaa'; ctx.font='9px DM Mono'; ctx.textAlign='center';
+      const short = p.date.split('/').slice(0,2).join('/');
+      ctx.fillText(short, x, pad.top+ch+22);
+    }
+    if (i===points.length-1) {
+      ctx.fillStyle='#e8320a'; ctx.font='bold 11px DM Mono'; ctx.textAlign='center';
+      ctx.fillText(p.v.toFixed(1), x, y-10);
+    }
+  });
+
+  // Stats
+  renderChartStats(points, vals, minV, maxV);
+}
+
+function renderChartStats(points, vals, minV, maxV) {
+  const statsDiv = document.getElementById('chart-stats');
+  const grid = document.getElementById('chart-stat-grid');
+  statsDiv.style.display = 'block';
+
+  const first = vals[0], last = vals[vals.length-1];
+  const delta = last - first;
+  const sign = delta >= 0 ? '+' : '';
+  const field = ALL.find(f => f.key === activeChart);
+  let deltaClass = 'neu';
+  if (field?.better === 'down') deltaClass = delta < 0 ? 'pos' : 'neg';
+  if (field?.better === 'up')   deltaClass = delta > 0 ? 'pos' : 'neg';
+
+  grid.innerHTML = `
+    <div class="field" style="gap:2px">
+      <div class="lbl">Prima sessione</div>
+      <div style="font-family:'Bebas Neue';font-size:24px;color:var(--tx)">${first.toFixed(1)}<span style="font-family:'DM Sans';font-size:12px;color:var(--mu);margin-left:3px">${field?.unit||''}</span></div>
+    </div>
+    <div class="field" style="gap:2px">
+      <div class="lbl">Ultima sessione</div>
+      <div style="font-family:'Bebas Neue';font-size:24px;color:var(--red)">${last.toFixed(1)}<span style="font-family:'DM Sans';font-size:12px;color:var(--mu);margin-left:3px">${field?.unit||''}</span></div>
+    </div>
+    <div class="field" style="gap:2px">
+      <div class="lbl">Variazione totale</div>
+      <div style="font-family:'Bebas Neue';font-size:24px" class="${deltaClass}">${sign}${delta.toFixed(1)}<span style="font-family:'DM Sans';font-size:12px;margin-left:3px">${field?.unit||''}</span></div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════
+// SETUP
+// ══════════════════════════════════════════════
+function saveSetup() {
+  scriptUrl = document.getElementById('setup-url').value.trim();
+  localStorage.setItem(URL_KEY, scriptUrl);
+  toast('URL salvato ✓', 'ok');
+}
+
+function clearLocalUrl() {
+  scriptUrl = '';
+  localStorage.removeItem(URL_KEY);
+  document.getElementById('setup-url').value = '';
+  toast('URL rimosso', '');
+}
+
+async function testConnection() {
+  if (!scriptUrl) { toast('Nessun URL configurato', 'err'); return; }
+  try {
+    const res = await fetch(scriptUrl + '?action=ping');
+    const json = await res.json();
+    toast(json.status === 'ok' ? 'Connessione OK ✓' : 'Risposta ricevuta (verifica manualmente)', 'ok');
+  } catch {
+    toast('Connessione fallita', 'err');
+  }
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function isoToIT(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function parseITDate(s) {
+  if (!s) return 0;
+  const parts = String(s).split('/');
+  if (parts.length === 3) return new Date(parts[2], parts[1]-1, parts[0]).getTime();
+  return 0;
+}
+
+function updateTopbar() {
+  document.getElementById('t-label').textContent = currentClient ? 'Cliente attivo' : 'Nessun cliente';
+  document.getElementById('t-client').textContent = currentClient || '';
+  document.getElementById('bb-client').textContent = currentClient || '—';
+}
+
+function updateBar() {}
+
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = 'toast', 2600);
+}
+
+window.addEventListener('resize', () => {
+  if (!document.getElementById('page-grf').classList.contains('on')) return;
+  if (clientSessions.length > 0) renderChart();
+});
+</script>
+</body>
+</html>
