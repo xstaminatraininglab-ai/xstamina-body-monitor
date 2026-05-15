@@ -220,7 +220,7 @@ input.err,select.err{border-color:#ef4444!important}
     <div class="field"><label class="lbl">Massa grassa %</label><input type="number" id="f-mg-pct" step=".1" placeholder="24.5"></div>
   </div>
   <div class="r3">
-    <div class="field"><label class="lbl">Massa magra %</label><input type="number" id="f-mm-pct" step=".1" placeholder="75.5"></div>
+    <div class="field"><label class="lbl">Massa magra %</label><input type="number" id="f-mm-pct" step=".1" placeholder="30.0"></div>
     <div class="field"><label class="lbl">Grasso viscerale</label><input type="number" id="f-visc" step=".5" placeholder="8"></div>
     <div class="field"><label class="lbl">Grasso viscerale RM <span style="font-size:9px;font-weight:400">(kcal)</span></label><input type="number" id="f-visc-rm" step="1" placeholder="1420"></div>
   </div>
@@ -386,7 +386,7 @@ input.err,select.err{border-color:#ef4444!important}
 // CONFIG & STATE
 // ══════════════════════════════════════════════
 const URL_KEY = 'xbm_script_url';
-let scriptUrl = localStorage.getItem(URL_KEY) || '';
+let scriptUrl = localStorage.getItem(URL_KEY) || 'https://script.google.com/macros/s/AKfycbwnIhYyRzd1Qh9irZ90RVz17gQgF0H_ZFID2q0dMkUXougtnooOzX2ssgqL5CoKGQlT/exec';
 let currentClient = '';
 let clientSessions = [];   // array of session objects sorted by date asc
 let activeChart = 'peso';
