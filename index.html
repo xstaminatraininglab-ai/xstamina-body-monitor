@@ -386,7 +386,9 @@ input.err,select.err{border-color:#ef4444!important}
 // CONFIG & STATE
 // ══════════════════════════════════════════════
 const URL_KEY = 'xbm_script_url';
-let scriptUrl = localStorage.getItem(URL_KEY) || 'https://script.google.com/macros/s/AKfycbwnIhYyRzd1Qh9irZ90RVz17gQgF0H_ZFID2q0dMkUXougtnooOzX2ssgqL5CoKGQlT/exec';
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwnIhYyRzd1Qh9irZ90RVz17gQgF0H_ZFID2q0dMkUXougtnooOzX2ssgqL5CoKGQlT/exec';
+let scriptUrl = DEFAULT_URL;
+function getUrl() { return localStorage.getItem(URL_KEY) || DEFAULT_URL; }
 let currentClient = '';
 let clientSessions = [];   // array of session objects sorted by date asc
 let activeChart = 'peso';
@@ -559,7 +561,7 @@ async function saveSession() {
   const errors = [];
   if (!name) errors.push('Nome cliente obbligatorio');
   if (!dateVal) errors.push('Data sessione obbligatoria');
-  if (!scriptUrl) errors.push("Configura prima l'URL script nel tab Setup");
+  scriptUrl = getUrl(); if (!scriptUrl) errors.push("Configura prima l'URL script nel tab Setup");
 
   const vbox = document.getElementById('val-box');
   const vlist = document.getElementById('val-list');
@@ -637,7 +639,7 @@ function clearForm(keepName) {
 async function loadHistory() {
   const name = document.getElementById('s-name').value.trim();
   if (!name) { toast('Inserisci il nome del cliente', 'err'); return; }
-  if (!scriptUrl) { toast("Configura prima l'URL script nel tab Setup", 'err'); return; }
+  scriptUrl = getUrl(); if (!scriptUrl) { toast("Configura prima l'URL script nel tab Setup", 'err'); return; }
 
   toast('Caricamento...', '');
 
@@ -947,7 +949,7 @@ function clearLocalUrl() {
 }
 
 async function testConnection() {
-  if (!scriptUrl) { toast('Nessun URL configurato', 'err'); return; }
+  scriptUrl = getUrl(); if (!scriptUrl) { toast('Nessun URL configurato', 'err'); return; }
   try {
     const res = await fetch(scriptUrl + '?action=ping');
     const json = await res.json();
