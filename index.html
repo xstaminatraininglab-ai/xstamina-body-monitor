@@ -522,9 +522,14 @@ async function selectClientFromList(name) {
     const jsonS = await resS.json();
     const jsonA = await resA.json();
     if (jsonS.status !== 'ok') { toast('Errore caricamento', 'err'); return; }
-    clientSessions = (jsonS.data || []).sort((a,b) => parseITDate(a.data) - parseITDate(b.data));
+    clientSessions = (jsonS.data || [])
+      .map(s => ({ ...s, data: formatDateFromSheet(String(s.data)) }))
+      .sort((a,b) => parseITDate(a.data) - parseITDate(b.data));
     if (jsonA.status === 'ok' && jsonA.data) {
-      currentAnagrafica = jsonA.data;
+      currentAnagrafica = {
+        ...jsonA.data,
+        data_nascita: formatDateFromSheet(String(jsonA.data.data_nascita || ''))
+      };
       document.getElementById('f-name').value = name;
       showAnagraficaBar();
     }
@@ -707,13 +712,18 @@ async function loadHistory() {
 
     if (jsonS.status !== 'ok') { toast('Errore: '+(jsonS.message||'?'),'err'); return; }
 
-    clientSessions = (jsonS.data || []).sort((a,b) => parseITDate(a.data) - parseITDate(b.data));
+    clientSessions = (jsonS.data || [])
+      .map(s => ({ ...s, data: formatDateFromSheet(String(s.data)) }))
+      .sort((a,b) => parseITDate(a.data) - parseITDate(b.data));
     currentClient = name;
     addKnownClient(name);
 
     // Aggiorna anagrafica anche nel tab Nuova
     if (jsonA.status === 'ok' && jsonA.data) {
-      currentAnagrafica = jsonA.data;
+      currentAnagrafica = {
+        ...jsonA.data,
+        data_nascita: formatDateFromSheet(String(jsonA.data.data_nascita || ''))
+      };
       document.getElementById('f-name').value = name;
       showAnagraficaBar();
     }
@@ -828,7 +838,7 @@ function renderBottomBar() {
   const first = clientSessions[0];
   const peso = parseFloat(last?.peso);
   const mg = parseFloat(last?.mg_pct);
-  document.getElementById('bb-note').textContent = `${clientSessions.length} sessioni · ultima: ${last?.data}`;
+  document.getElementById('bb-note').textContent = `${clientSessions.length} sessioni · ultima: ${formatDateFromSheet(last?.data)}`;
 
   const minis = document.getElementById('bb-minis');
   let html = '';
@@ -871,7 +881,7 @@ function renderChart() {
   canvas.style.display = 'block';
 
   const points = clientSessions
-    .map(s => ({ date: s.data, v: parseFloat(s[activeChart]) }))
+    .map(s => ({ date: formatDateFromSheet(s.data), v: parseFloat(s[activeChart]) }))
     .filter(p => !isNaN(p.v));
 
   const w = canvas.offsetWidth * window.devicePixelRatio;
@@ -1099,7 +1109,7 @@ function generaReport() {
         if (isNaN(v)) return '';
         const xi = xs[pts.indexOf(v)] || xs[i];
         if (i === 0 || i === clientSessions.length - 1) {
-          const short = s.data.split('/').slice(0,2).join('/');
+          const short = formatDateFromSheet(s.data).split('/').slice(0,2).join('/');
           const anchor = i === 0 ? 'start' : 'end';
           return `<text x="${xi.toFixed(1)}" y="${h}" text-anchor="${anchor}" font-size="8" fill="#aaa" font-family="DM Mono,monospace">${short}</text>`;
         }
@@ -1138,7 +1148,7 @@ function generaReport() {
           <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:#1a1a1a;line-height:1">${isNaN(lv)?'—':lv.toFixed(1)}<span style="font-size:14px;color:#aaa;font-family:'DM Sans',sans-serif;margin-left:4px">${f.unit}</span></div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:10px;color:#aaa;font-family:'DM Sans',sans-serif">${first.data} → ${last.data}</div>
+          <div style="font-size:10px;color:#aaa;font-family:'DM Sans',sans-serif">${formatDateFromSheet(first.data)} → ${formatDateFromSheet(last.data)}</div>
           <div style="font-size:18px;font-family:'DM Mono',monospace;margin-top:2px">${deltaHtml(f.key, f.better)} ${f.unit}</div>
           <div style="font-size:10px;color:#aaa">${pts.length} rilevazioni</div>
         </div>
@@ -1150,7 +1160,8 @@ function generaReport() {
   // Calc age
   let etaStr = '';
   if (ana.data_nascita) {
-    const p = ana.data_nascita.split('/');
+    const dobFormatted = formatDateFromSheet(String(ana.data_nascita));
+    const p = dobFormatted.split('/');
     if (p.length === 3) {
       const birth = new Date(p[2], p[1]-1, p[0]);
       const age = Math.floor((new Date() - birth) / (365.25*24*3600*1000));
@@ -1205,7 +1216,7 @@ body{background:#f5f4f2;font-family:'DM Sans',sans-serif;color:#1a1a1a;padding:0
     </div>
     <div>
       <div class="client-name">${nome}</div>
-      <div class="client-sub">${clientSessions.length} sessioni · ${first.data} → ${last.data}</div>
+      <div class="client-sub">${clientSessions.length} sessioni · ${formatDateFromSheet(first.data)} → ${formatDateFromSheet(last.data)}</div>
     </div>
   </div>
 
@@ -1213,7 +1224,7 @@ body{background:#f5f4f2;font-family:'DM Sans',sans-serif;color:#1a1a1a;padding:0
   ${(ana.data_nascita || ana.altezza) ? `
   <div class="section-title">Anagrafica</div>
   <div class="ana-bar">
-    ${ana.data_nascita ? `<div class="ana-item"><div class="ana-label">Data di nascita</div><div class="ana-value" style="font-size:15px;font-family:'DM Mono',monospace">${ana.data_nascita}</div></div>` : ''}
+    ${ana.data_nascita ? `<div class="ana-item"><div class="ana-label">Data di nascita</div><div class="ana-value" style="font-size:15px;font-family:'DM Mono',monospace">${formatDateFromSheet(String(ana.data_nascita))}</div></div>` : ''}
     ${etaStr ? `<div class="ana-item"><div class="ana-label">Età</div><div class="ana-value">${etaStr}</div></div>` : ''}
     ${ana.altezza ? `<div class="ana-item"><div class="ana-label">Altezza</div><div class="ana-value">${ana.altezza} <span style="font-size:12px;color:#aaa">cm</span></div></div>` : ''}
   </div>` : ''}
