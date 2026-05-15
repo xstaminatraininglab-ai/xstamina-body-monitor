@@ -155,7 +155,6 @@ input.err,select.err{border-color:#ef4444!important}
 <div id="tabs">
   <button class="tab on" id="t-ins" onclick="showTab('ins')">📝 Nuova</button>
   <button class="tab" id="t-sto" onclick="showTab('sto')">📊 Storico</button>
-  <button class="tab" id="t-grf" onclick="showTab('grf')">📈 Grafici</button>
   <button class="tab" id="t-set" onclick="showTab('set')">⚙️ Setup</button>
 </div>
 
@@ -256,20 +255,19 @@ input.err,select.err{border-color:#ef4444!important}
 <!-- ═══════════════════════════════════════════ -->
 <div class="page" id="page-sto"><div class="wrap">
 
-<div class="st">Seleziona Cliente</div>
-<div class="card">
-  <div class="r2">
-    <div class="field name-wrap">
-      <label class="lbl">Nome e Cognome</label>
-      <input id="s-name" type="text" placeholder="Giulia Rossi" oninput="onStoNameInput()" autocomplete="off">
-      <div id="sto-name-dd"></div>
-    </div>
-    <div class="field" style="justify-content:flex-end">
-      <label class="lbl">&nbsp;</label>
-      <button onclick="loadHistory()" style="height:46px;background:var(--red);border:none;border-radius:6px;color:#fff;font-family:'Bebas Neue';font-size:16px;letter-spacing:2px;cursor:pointer;padding:0 16px">CARICA</button>
-    </div>
+<!-- VISTA LISTA CLIENTI -->
+<div id="sto-clienti-view">
+  <div class="st">Clienti</div>
+  <div id="clienti-list-wrap">
+    <div class="hist-empty">Nessun cliente salvato ancora.</div>
   </div>
 </div>
+
+<!-- VISTA DETTAGLIO CLIENTE -->
+<div id="sto-dettaglio-view" style="display:none">
+  <div style="margin-bottom:12px">
+    <button onclick="tornaAClienti()" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--mu);cursor:pointer;font-family:'DM Sans',sans-serif">← Tutti i clienti</button>
+  </div>
 
 <!-- CONFRONTO PRIMA / ULTIMA -->
 <div id="confronto-wrap" style="display:none">
@@ -287,6 +285,20 @@ input.err,select.err{border-color:#ef4444!important}
 
 <div id="sto-empty" class="hist-empty" style="display:none">Nessuna sessione trovata per questo cliente.</div>
 
+<!-- GRAFICI -->
+<div id="grafici-wrap" style="display:none">
+  <div class="st">Andamento nel Tempo</div>
+  <div class="card">
+    <div class="chart-tabs" id="chart-pills"></div>
+    <canvas id="chart-canvas" style="width:100%;height:220px;display:block"></canvas>
+  </div>
+  <div id="chart-stats" style="display:none">
+    <div class="card">
+      <div class="r3" id="chart-stat-grid"></div>
+    </div>
+  </div>
+</div>
+
 <!-- BOTTONE REPORT -->
 <div id="report-wrap" style="display:none;margin-top:8px">
   <button onclick="generaReport()" style="width:100%;padding:14px;background:#1a1a1a;border:none;border-radius:8px;color:#fff;font-family:'Bebas Neue';font-size:20px;letter-spacing:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
@@ -294,28 +306,10 @@ input.err,select.err{border-color:#ef4444!important}
   </button>
 </div>
 
+</div><!-- /sto-dettaglio-view -->
 </div></div><!-- /sto -->
 
-<!-- ═══════════════════════════════════════════ -->
-<!-- TAB: GRAFICI                                -->
-<!-- ═══════════════════════════════════════════ -->
-<div class="page" id="page-grf"><div class="wrap">
 
-<div class="st">Seleziona Metrica</div>
-<div class="card">
-  <div class="chart-tabs" id="chart-pills"></div>
-  <canvas id="chart-canvas" style="width:100%;height:220px;display:block"></canvas>
-  <div id="chart-empty" style="display:none;padding:30px;text-align:center;color:var(--mu);font-size:13px">Carica lo storico di un cliente dallo tab Storico</div>
-</div>
-
-<div id="chart-stats" style="display:none">
-  <div class="st">Statistiche</div>
-  <div class="card">
-    <div class="r3" id="chart-stat-grid"></div>
-  </div>
-</div>
-
-</div></div><!-- /grf -->
 
 <!-- ═══════════════════════════════════════════ -->
 <!-- TAB: SETUP                                  -->
@@ -432,20 +426,19 @@ window.addEventListener('DOMContentLoaded', () => {
   // chart pills
   buildChartPills();
   // show empty chart
-  document.getElementById('chart-empty').style.display = 'block';
 });
 
 // ══════════════════════════════════════════════
 // TABS
 // ══════════════════════════════════════════════
 function showTab(name) {
-  ['ins','sto','grf','set'].forEach(t => {
+  ['ins','sto','set'].forEach(t => {
     document.getElementById('page-'+t).classList.remove('on');
     document.getElementById('t-'+t).classList.remove('on');
   });
   document.getElementById('page-'+name).classList.add('on');
   document.getElementById('t-'+name).classList.add('on');
-  if (name === 'grf' && clientSessions.length > 0) renderChart();
+  if (name === 'sto') renderClientList();
 }
 
 // ══════════════════════════════════════════════
@@ -458,6 +451,7 @@ function getKnownClients() {
 function addKnownClient(name) {
   const list = getKnownClients();
   if (!list.includes(name)) { list.push(name); localStorage.setItem('xbm_clients', JSON.stringify(list)); }
+  renderClientList();
 }
 
 function onNameInput() {
@@ -491,6 +485,65 @@ function onStoNameInput() {
 function selectStoName(name) {
   document.getElementById('s-name').value = name;
   document.getElementById('sto-name-dd').style.display = 'none';
+}
+
+// ══════════════════════════════════════════════
+// LISTA CLIENTI (storico)
+// ══════════════════════════════════════════════
+function renderClientList() {
+  const clients = getKnownClients();
+  const wrap = document.getElementById('clienti-list-wrap');
+  if (clients.length === 0) {
+    wrap.innerHTML = '<div class="hist-empty">Nessun cliente salvato ancora.<br>Inserisci la prima sessione dal tab Nuova.</div>';
+    return;
+  }
+  const sorted = [...clients].sort((a,b) => a.localeCompare(b, 'it'));
+  wrap.innerHTML = sorted.map(c => `
+    <div class="sess-row" onclick="selectClientFromList('${c.replace(/'/g,"\'")}')">
+      <div>
+        <div class="sess-date" style="font-size:16px">${c}</div>
+      </div>
+      <div style="color:var(--mu);font-size:18px">›</div>
+    </div>`).join('');
+}
+
+async function selectClientFromList(name) {
+  if (!scriptUrl) { toast("Configura prima l'URL script nel tab Setup", 'err'); return; }
+  document.getElementById('sto-clienti-view').style.display = 'none';
+  document.getElementById('sto-dettaglio-view').style.display = 'block';
+  currentClient = name;
+  updateTopbar();
+  toast('Caricamento...', '');
+  try {
+    const [resS, resA] = await Promise.all([
+      fetch(getUrl() + '?action=get&cliente=' + encodeURIComponent(name)),
+      fetch(getUrl() + '?action=getAnagrafica&cliente=' + encodeURIComponent(name)),
+    ]);
+    const jsonS = await resS.json();
+    const jsonA = await resA.json();
+    if (jsonS.status !== 'ok') { toast('Errore caricamento', 'err'); return; }
+    clientSessions = (jsonS.data || []).sort((a,b) => parseITDate(a.data) - parseITDate(b.data));
+    if (jsonA.status === 'ok' && jsonA.data) {
+      currentAnagrafica = jsonA.data;
+      document.getElementById('f-name').value = name;
+      showAnagraficaBar();
+    }
+    renderStorico();
+    toast(clientSessions.length + ' sessioni caricate ✓', 'ok');
+  } catch(e) {
+    toast('Errore di connessione', 'err');
+  }
+}
+
+function tornaAClienti() {
+  document.getElementById('sto-dettaglio-view').style.display = 'none';
+  document.getElementById('sto-clienti-view').style.display = 'block';
+  document.getElementById('confronto-wrap').style.display = 'none';
+  document.getElementById('sessions-wrap').style.display = 'none';
+  document.getElementById('grafici-wrap').style.display = 'none';
+  document.getElementById('report-wrap').style.display = 'none';
+  document.getElementById('sto-empty').style.display = 'none';
+  clientSessions = [];
 }
 
 // ══════════════════════════════════════════════
@@ -690,10 +743,13 @@ function renderStorico() {
   wEmpty.style.display = 'none';
   wConf.style.display = 'block';
   wSess.style.display = 'block';
+  document.getElementById('grafici-wrap').style.display = 'block';
   document.getElementById('report-wrap').style.display = 'block';
 
   renderConfronto();
   renderSessionsList();
+  buildChartPills();
+  renderChart();
   renderBottomBar();
 }
 
@@ -701,11 +757,13 @@ function renderConfronto() {
   const first = clientSessions[0];
   const last = clientSessions[clientSessions.length - 1];
   const table = document.getElementById('confronto-table');
+  const fd = formatDateFromSheet(first.data);
+  const ld = formatDateFromSheet(last.data);
 
   let html = `<thead><tr>
     <th>Metrica</th>
-    <th>${first.data}</th>
-    <th>${last.data}</th>
+    <th>${fd}</th>
+    <th>${ld}</th>
     <th>Δ totale</th>
   </tr></thead><tbody>`;
 
@@ -752,7 +810,7 @@ function renderSessionsList() {
 
     return `<div class="sess-row" onclick="expandSession(${reversed.length - 1 - i})">
       <div>
-        <div class="sess-date">${s.data}</div>
+        <div class="sess-date">${formatDateFromSheet(s.data)}</div>
         <div class="sess-stats">${info.join('  ·  ') || 'Dati non disponibili'}</div>
         ${s.note ? `<div style="font-size:10px;color:var(--mu);margin-top:2px">📝 ${s.note}</div>` : ''}
       </div>
@@ -804,15 +862,12 @@ function selectChart(key, el) {
 
 function renderChart() {
   const canvas = document.getElementById('chart-canvas');
-  const empty = document.getElementById('chart-empty');
   const ctx = canvas.getContext('2d');
 
   if (clientSessions.length === 0) {
-    empty.style.display = 'block';
     canvas.style.display = 'none';
     return;
   }
-  empty.style.display = 'none';
   canvas.style.display = 'block';
 
   const points = clientSessions
@@ -964,13 +1019,27 @@ async function testConnection() {
 // ══════════════════════════════════════════════
 function isoToIT(iso) {
   if (!iso) return '';
-  const [y,m,d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+  // Handle full ISO datetime e.g. 2026-05-14T22:00:00.000Z
+  const clean = String(iso).split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length !== 3) return String(iso);
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function formatDateFromSheet(val) {
+  // Google Sheets might return a Date object serialized as ISO string
+  if (!val) return '';
+  const s = String(val);
+  // Already in gg/mm/aaaa
+  if (s.includes('/')) return s;
+  // ISO format with or without time
+  return isoToIT(s);
 }
 
 function parseITDate(s) {
   if (!s) return 0;
-  const parts = String(s).split('/');
+  const str = formatDateFromSheet(s);
+  const parts = str.split('/');
   if (parts.length === 3) return new Date(parts[2], parts[1]-1, parts[0]).getTime();
   return 0;
 }
@@ -992,7 +1061,6 @@ function toast(msg, type) {
 }
 
 window.addEventListener('resize', () => {
-  if (!document.getElementById('page-grf').classList.contains('on')) return;
   if (clientSessions.length > 0) renderChart();
 });
 
@@ -1191,8 +1259,31 @@ body{background:#f5f4f2;font-family:'DM Sans',sans-serif;color:#1a1a1a;padding:0
 </body>
 </html>`;
 
+  // Add share button inside the report HTML
+  const shareBtn = `
+  <div style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e5e5;padding:12px 16px;z-index:999">
+    <button onclick="condividiReport()" style="width:100%;padding:14px;background:#25D366;border:none;border-radius:10px;color:#fff;font-family:'Bebas Neue';font-size:20px;letter-spacing:2px;cursor:pointer">
+      📤 CONDIVIDI VIA WHATSAPP
+    </button>
+  </div>
+  <script>
+  async function condividiReport() {
+    const blob = new Blob([document.documentElement.outerHTML], {type: 'text/html'});
+    const file = new File([blob], 'report-${nome.replace(/\s+/g,'-').toLowerCase()}.html', {type: 'text/html'});
+    if (navigator.canShare && navigator.canShare({files:[file]})) {
+      try { await navigator.share({files:[file], title:'Report ${nome}', text:'Report Xstamina Body Monitor'}); return; } catch(e) {}
+    }
+    // Fallback: download
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'report-${nome.replace(/\s+/g,'-').toLowerCase()}.html';
+    a.click();
+  }
+  <\/script>`;
+
+  const finalHtml = html.replace('</body>', shareBtn + '</body>');
   const win = window.open('', '_blank');
-  win.document.write(html);
+  win.document.write(finalHtml);
   win.document.close();
 }
 
