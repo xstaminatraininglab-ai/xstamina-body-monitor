@@ -141,10 +141,13 @@ input.err,select.err{border-color:#ef4444!important}
 
 <!-- TOPBAR -->
 <div id="topbar">
-  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAACAvzbMAAA0EElEQVR4nO3deXxU1fk/8M8zd5KQhJCQABZRUVxbl7rU5aetrW3d6oIKBdx3rYq4gCAIssiqgiBUARFUUNzR2rpbtVVbq9VqF637Uv2qkH1PZub5/XHumQxqrRyTzNyTz/v14tUSEZOZO/dzz3nOeY6oKoiIiDZWLNvfABERRRMDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicMECIiMgJA4SIiJwwQIiIyAkDhIiInDBAiIjICQOEiIicxLP9DXgrkW1/A19NJNvfAfkqfc0rkL78s/05ECDGp+SuIpqrNzrqOqocv6AAQAT7X0T/ywbXEMxNmtdOj8MAuYja1kDaW4Gi3kAiAWS7GIsFQF4ekJf/9R90VyCVCv8d3hQog702BOZ6+qL2dqChHmisBxqbFK3N5mupxP/4i8X8vd/2XhRkjjTEfH2lZcD2O/EiJiKiDIo2WuB4WqfSTi9YVp8y+tWwckCsRqt1J7rW9v6AIr5JBWbhAJfSN3pN6qEH6dSqVbmb5LG7cTG2bh+pV1OJ3oU2Ag5Y84dBjvFSB5AAAA" alt="X">
-  <div style="display:flex;align-items:baseline;gap:6px">
-    <div id="t-label">Nessun cliente</div>
-    <div id="t-client"></div>
+  <div style="display:flex;flex-direction:column;line-height:1">
+    <div style="font-family:'Bebas Neue';font-size:11px;letter-spacing:3px;color:#aaa">XSTAMINA</div>
+    <div style="font-family:'Bebas Neue';font-size:22px;letter-spacing:2px;color:#e8320a;margin-top:-2px">BODY MONITOR</div>
+  </div>
+  <div style="text-align:right">
+    <div id="t-label" style="font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:1px;line-height:1">Nessun cliente</div>
+    <div id="t-client" style="font-family:'Bebas Neue';font-size:20px;color:#1a1a1a;line-height:1.1"></div>
   </div>
 </div>
 
@@ -283,6 +286,13 @@ input.err,select.err{border-color:#ef4444!important}
 </div>
 
 <div id="sto-empty" class="hist-empty" style="display:none">Nessuna sessione trovata per questo cliente.</div>
+
+<!-- BOTTONE REPORT -->
+<div id="report-wrap" style="display:none;margin-top:8px">
+  <button onclick="generaReport()" style="width:100%;padding:14px;background:#1a1a1a;border:none;border-radius:8px;color:#fff;font-family:'Bebas Neue';font-size:20px;letter-spacing:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+    📄 GENERA REPORT CLIENTE
+  </button>
+</div>
 
 </div></div><!-- /sto -->
 
@@ -678,6 +688,7 @@ function renderStorico() {
   wEmpty.style.display = 'none';
   wConf.style.display = 'block';
   wSess.style.display = 'block';
+  document.getElementById('report-wrap').style.display = 'block';
 
   renderConfronto();
   renderSessionsList();
@@ -982,6 +993,207 @@ window.addEventListener('resize', () => {
   if (!document.getElementById('page-grf').classList.contains('on')) return;
   if (clientSessions.length > 0) renderChart();
 });
+
+// ══════════════════════════════════════════════
+// GENERA REPORT
+// ══════════════════════════════════════════════
+function generaReport() {
+  if (clientSessions.length === 0) { toast('Nessuna sessione caricata', 'err'); return; }
+
+  const first = clientSessions[0];
+  const last  = clientSessions[clientSessions.length - 1];
+  const ana   = currentAnagrafica || {};
+  const nome  = currentClient;
+  const oggi  = new Date().toLocaleDateString('it-IT');
+
+  // Build chart data for each metric as sparkline coords
+  function sparkline(key, w, h) {
+    const pts = clientSessions.map(s => parseFloat(s[key])).filter(v => !isNaN(v));
+    if (pts.length < 2) return '';
+    const minV = Math.min(...pts), maxV = Math.max(...pts), range = maxV - minV || 1;
+    const xs = pts.map((_, i) => (i / (pts.length - 1)) * (w - 20) + 10);
+    const ys = pts.map(v => h - 10 - ((v - minV) / range) * (h - 20));
+    const path = xs.map((x, i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + ys[i].toFixed(1)).join(' ');
+    const area = path + ' L' + xs[xs.length-1].toFixed(1) + ',' + (h-10) + ' L' + xs[0].toFixed(1) + ',' + (h-10) + ' Z';
+    const dots = pts.map((v, i) => `<circle cx="${xs[i].toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3" fill="#e8320a"/>`).join('');
+    const labels = pts.map((v, i) => {
+      if (i === 0 || i === pts.length - 1) {
+        const anchor = i === 0 ? 'start' : 'end';
+        return `<text x="${xs[i].toFixed(1)}" y="${(ys[i]-8).toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="#e8320a" font-family="DM Mono,monospace">${v.toFixed(1)}</text>`;
+      }
+      return '';
+    }).join('');
+    const dateLabels = clientSessions
+      .map((s, i) => {
+        const v = parseFloat(s[key]);
+        if (isNaN(v)) return '';
+        const xi = xs[pts.indexOf(v)] || xs[i];
+        if (i === 0 || i === clientSessions.length - 1) {
+          const short = s.data.split('/').slice(0,2).join('/');
+          const anchor = i === 0 ? 'start' : 'end';
+          return `<text x="${xi.toFixed(1)}" y="${h}" text-anchor="${anchor}" font-size="8" fill="#aaa" font-family="DM Mono,monospace">${short}</text>`;
+        }
+        return '';
+      }).join('');
+    return `<svg viewBox="0 0 ${w} ${h+10}" width="100%" style="display:block">
+      <defs><linearGradient id="g${key}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e8320a" stop-opacity="0.15"/><stop offset="100%" stop-color="#e8320a" stop-opacity="0"/></linearGradient></defs>
+      <path d="${area}" fill="url(#g${key})"/>
+      <path d="${path}" stroke="#e8320a" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}${labels}${dateLabels}
+    </svg>`;
+  }
+
+  function deltaHtml(key, better) {
+    const fv = parseFloat(first[key]), lv = parseFloat(last[key]);
+    if (isNaN(fv) || isNaN(lv)) return '—';
+    const d = lv - fv;
+    const sign = d >= 0 ? '+' : '';
+    let color = '#777';
+    if (better === 'down') color = d < 0 ? '#16a34a' : d > 0 ? '#e8320a' : '#777';
+    if (better === 'up')   color = d > 0 ? '#16a34a' : d < 0 ? '#e8320a' : '#777';
+    return `<span style="color:${color};font-weight:700">${sign}${d.toFixed(1)}</span>`;
+  }
+
+  function metricBlock(f) {
+    const lv = parseFloat(last[f.key]);
+    const spark = sparkline(f.key, 320, 70);
+    if (isNaN(lv) && !spark) return '';
+    const pts = clientSessions.map(s => parseFloat(s[f.key])).filter(v => !isNaN(v));
+    if (pts.length === 0) return '';
+    return `
+    <div style="background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:16px;margin-bottom:12px;page-break-inside:avoid">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#999;font-family:'DM Sans',sans-serif;font-weight:600">${f.label}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:#1a1a1a;line-height:1">${isNaN(lv)?'—':lv.toFixed(1)}<span style="font-size:14px;color:#aaa;font-family:'DM Sans',sans-serif;margin-left:4px">${f.unit}</span></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:#aaa;font-family:'DM Sans',sans-serif">${first.data} → ${last.data}</div>
+          <div style="font-size:18px;font-family:'DM Mono',monospace;margin-top:2px">${deltaHtml(f.key, f.better)} ${f.unit}</div>
+          <div style="font-size:10px;color:#aaa">${pts.length} rilevazioni</div>
+        </div>
+      </div>
+      ${spark}
+    </div>`;
+  }
+
+  // Calc age
+  let etaStr = '';
+  if (ana.data_nascita) {
+    const p = ana.data_nascita.split('/');
+    if (p.length === 3) {
+      const birth = new Date(p[2], p[1]-1, p[0]);
+      const age = Math.floor((new Date() - birth) / (365.25*24*3600*1000));
+      etaStr = age + ' anni';
+    }
+  }
+
+  const biaBlocks  = BIA.map(f => metricBlock(f)).join('');
+  const circBlocks = CIRC.map(f => metricBlock(f)).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report — ${nome}</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f5f4f2;font-family:'DM Sans',sans-serif;color:#1a1a1a;padding:0}
+.page{max-width:600px;margin:0 auto;padding:24px 16px 60px}
+.header{background:#1a1a1a;color:#fff;border-radius:12px;padding:20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:'Bebas Neue';font-size:28px;letter-spacing:3px;color:#e8320a}
+.logo-sub{font-size:10px;color:#666;letter-spacing:2px;text-transform:uppercase;margin-top:-4px}
+.client-name{font-family:'Bebas Neue';font-size:22px;text-align:right;line-height:1.1}
+.client-sub{font-size:10px;color:#666;text-align:right;margin-top:2px}
+.section-title{font-family:'Bebas Neue';font-size:11px;letter-spacing:3px;color:#e8320a;text-transform:uppercase;margin:20px 0 10px;padding-bottom:6px;border-bottom:2px solid #e8320a}
+.ana-bar{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:14px 16px;display:flex;gap:24px;margin-bottom:4px;flex-wrap:wrap}
+.ana-item{display:flex;flex-direction:column;gap:2px}
+.ana-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;font-weight:600}
+.ana-value{font-family:'Bebas Neue';font-size:20px;color:#1a1a1a;line-height:1}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px}
+.sum-card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px}
+.sum-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:4px}
+.sum-val{font-family:'Bebas Neue';font-size:24px;color:#1a1a1a;line-height:1}
+.sum-delta{font-size:11px;font-family:'DM Mono',monospace;margin-top:2px}
+.sum-unit{font-size:11px;color:#aaa;font-family:'DM Sans',sans-serif}
+.footer{text-align:center;padding:20px 0;font-size:11px;color:#aaa}
+.wa-btn{display:block;background:#25D366;color:#fff;text-align:center;padding:14px;border-radius:10px;font-family:'Bebas Neue';font-size:20px;letter-spacing:2px;text-decoration:none;margin:16px 0}
+@media print{.wa-btn{display:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="logo">XSTAMINA</div>
+      <div class="logo-sub">Body Monitor</div>
+      <div style="font-size:10px;color:#555;margin-top:6px">Report del ${oggi}</div>
+    </div>
+    <div>
+      <div class="client-name">${nome}</div>
+      <div class="client-sub">${clientSessions.length} sessioni · ${first.data} → ${last.data}</div>
+    </div>
+  </div>
+
+  <!-- ANAGRAFICA -->
+  ${(ana.data_nascita || ana.altezza) ? `
+  <div class="section-title">Anagrafica</div>
+  <div class="ana-bar">
+    ${ana.data_nascita ? `<div class="ana-item"><div class="ana-label">Data di nascita</div><div class="ana-value" style="font-size:15px;font-family:'DM Mono',monospace">${ana.data_nascita}</div></div>` : ''}
+    ${etaStr ? `<div class="ana-item"><div class="ana-label">Età</div><div class="ana-value">${etaStr}</div></div>` : ''}
+    ${ana.altezza ? `<div class="ana-item"><div class="ana-label">Altezza</div><div class="ana-value">${ana.altezza} <span style="font-size:12px;color:#aaa">cm</span></div></div>` : ''}
+  </div>` : ''}
+
+  <!-- RIEPILOGO RAPIDO -->
+  <div class="section-title">Riepilogo</div>
+  <div class="summary-grid">
+    ${['peso','mg_pct','vita'].map(key => {
+      const f = ALL.find(x => x.key === key);
+      if (!f) return '';
+      const lv = parseFloat(last[f.key]);
+      const fv = parseFloat(first[f.key]);
+      if (isNaN(lv)) return '';
+      const d = (!isNaN(fv) && !isNaN(lv)) ? lv - fv : null;
+      let dcolor = '#777';
+      if (d !== null) {
+        if (f.better === 'down') dcolor = d < 0 ? '#16a34a' : d > 0 ? '#e8320a' : '#777';
+        if (f.better === 'up')   dcolor = d > 0 ? '#16a34a' : d < 0 ? '#e8320a' : '#777';
+      }
+      return `<div class="sum-card">
+        <div class="sum-label">${f.label}</div>
+        <div class="sum-val">${lv.toFixed(1)}<span class="sum-unit"> ${f.unit}</span></div>
+        ${d !== null ? `<div class="sum-delta" style="color:${dcolor}">${d >= 0 ? '+' : ''}${d.toFixed(1)} ${f.unit}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>
+
+  <!-- BIA -->
+  <div class="section-title">Bioimpedenziometria</div>
+  ${biaBlocks || '<p style="color:#aaa;font-size:13px;padding:10px 0">Nessun dato BIA disponibile</p>'}
+
+  <!-- CIRCONFERENZE -->
+  <div class="section-title">Circonferenze</div>
+  ${circBlocks || '<p style="color:#aaa;font-size:13px;padding:10px 0">Nessun dato circonferenze disponibile</p>'}
+
+  <!-- FOOTER -->
+  <div class="footer">
+    Report generato da Xstamina Body Monitor · xstaminatraininglab-ai.github.io/xstamina-body-monitor<br>
+    Via Agri 15, Roma · +39 375 5703958 · www.xstamina.it
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
 </script>
 </body>
 </html>
