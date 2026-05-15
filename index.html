@@ -1027,28 +1027,47 @@ async function testConnection() {
 // ══════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════
-function isoToIT(iso) {
-  if (!iso) return '';
-  // Handle full ISO datetime e.g. 2026-05-14T22:00:00.000Z
-  const clean = String(iso).split('T')[0];
-  const parts = clean.split('-');
-  if (parts.length !== 3) return String(iso);
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+// Unica funzione per tutte le date — gestisce TUTTI i formati
+// 1) gg/mm/aaaa (già ok)
+// 2) aaaa-mm-gg (ISO corto)
+// 3) aaaa-mm-ggTHH:MM:SS.sssZ (ISO lungo da Sheets)
+// 4) timestamp numerico Excel/Sheets (giorni dal 30/12/1899)
+function formatDateFromSheet(val) {
+  if (val === null || val === undefined || val === '') return '';
+  const s = String(val).trim();
+  if (!s || s === 'undefined' || s === 'null') return '';
+
+  // Caso 1: già in formato italiano gg/mm/aaaa
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) return s;
+
+  // Caso 2+3: ISO aaaa-mm-gg o aaaa-mm-ggTHH:...
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const parts = s.split('T')[0].split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
+  // Caso 4: numero puro (timestamp Excel — giorni dal 30/12/1899)
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    const n = parseFloat(s);
+    if (n > 1000) { // plausibile come timestamp Excel
+      const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+      const dd = String(d.getUTCDate()).padStart(2,'0');
+      const mm = String(d.getUTCMonth()+1).padStart(2,'0');
+      const yyyy = d.getUTCFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+  }
+
+  return s; // fallback: restituisce il valore grezzo
 }
 
-function formatDateFromSheet(val) {
-  // Google Sheets might return a Date object serialized as ISO string
-  if (!val) return '';
-  const s = String(val);
-  // Already in gg/mm/aaaa
-  if (s.includes('/')) return s;
-  // ISO format with or without time
-  return isoToIT(s);
+function isoToIT(iso) {
+  return formatDateFromSheet(iso);
 }
 
 function parseITDate(s) {
   if (!s) return 0;
-  const str = formatDateFromSheet(s);
+  const str = formatDateFromSheet(String(s));
   const parts = str.split('/');
   if (parts.length === 3) return new Date(parts[2], parts[1]-1, parts[0]).getTime();
   return 0;
