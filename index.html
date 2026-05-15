@@ -170,11 +170,37 @@ input.err,select.err{border-color:#ef4444!important}
       <div id="name-dd"></div>
     </div>
     <div class="field">
-      <label class="lbl">Data sessione</label>
+      <label class="lbl">Data sessione *</label>
       <input id="f-date" type="date">
     </div>
   </div>
-  <div class="r1">
+  <!-- ANAGRAFICA FISSA - appare dopo caricamento -->
+  <div id="anagrafica-bar" style="display:none;background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:10px 12px;margin-bottom:10px;flex-wrap:wrap;gap:16px;align-items:center">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--mu);font-weight:600;width:100%;margin-bottom:4px">Anagrafica salvata</div>
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div><span style="font-size:10px;color:var(--mu)">Nata il</span><br><strong id="ana-dob" style="font-size:13px">—</strong></div>
+      <div style="width:1px;height:28px;background:var(--bd)"></div>
+      <div><span style="font-size:10px;color:var(--mu)">Eta</span><br><strong id="ana-age" style="font-size:13px">—</strong></div>
+      <div style="width:1px;height:28px;background:var(--bd)"></div>
+      <div><span style="font-size:10px;color:var(--mu)">Altezza</span><br><strong id="ana-height" style="font-size:13px">—</strong></div>
+      <button onclick="editAnagrafica()" style="margin-left:auto;border:1px solid var(--bd);border-radius:5px;background:none;font-size:11px;color:var(--mu);padding:4px 10px;cursor:pointer">Modifica</button>
+    </div>
+  </div>
+  <!-- FORM ANAGRAFICA - visibile se non ancora salvata -->
+  <div id="anagrafica-form">
+    <div class="r2" style="margin-bottom:4px">
+      <div class="field">
+        <label class="lbl">Data di nascita</label>
+        <input id="f-dob" type="date">
+      </div>
+      <div class="field">
+        <label class="lbl">Altezza (cm)</label>
+        <input id="f-height" type="number" step="1" placeholder="168">
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--mu2);margin-bottom:8px">Data di nascita e altezza vengono salvate una volta sola nell'anagrafica del cliente.</div>
+  </div>
+  <div class="r1" style="margin-bottom:0">
     <div class="field">
       <label class="lbl">Note trainer (facoltativo)</label>
       <input type="text" id="f-note" placeholder="es. post ciclo, settimana di stress, ritmo regolare...">
@@ -456,6 +482,64 @@ function selectStoName(name) {
 }
 
 // ══════════════════════════════════════════════
+// ANAGRAFICA
+// ══════════════════════════════════════════════
+let currentAnagrafica = null;
+
+function showAnagraficaBar() {
+  if (!currentAnagrafica) return;
+  const bar = document.getElementById('anagrafica-bar');
+  const form = document.getElementById('anagrafica-form');
+  bar.style.display = 'block';
+  form.style.display = 'none';
+
+  const dob = currentAnagrafica.data_nascita || '';
+  document.getElementById('ana-dob').textContent = dob || '—';
+  document.getElementById('ana-age').textContent = dob ? calcAge(dob) + ' anni' : '—';
+  document.getElementById('ana-height').textContent = currentAnagrafica.altezza ? currentAnagrafica.altezza + ' cm' : '—';
+}
+
+function editAnagrafica() {
+  document.getElementById('anagrafica-bar').style.display = 'none';
+  document.getElementById('anagrafica-form').style.display = 'block';
+  if (currentAnagrafica) {
+    if (currentAnagrafica.data_nascita) {
+      const p = currentAnagrafica.data_nascita.split('/');
+      if (p.length === 3) document.getElementById('f-dob').value = p[2]+'-'+p[1]+'-'+p[0];
+    }
+    if (currentAnagrafica.altezza) document.getElementById('f-height').value = currentAnagrafica.altezza;
+  }
+}
+
+function calcAge(dobIT) {
+  const p = dobIT.split('/');
+  if (p.length !== 3) return '?';
+  const birth = new Date(p[2], p[1]-1, p[0]);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+async function loadAnagrafica(name) {
+  try {
+    const res = await fetch(scriptUrl + '?action=getAnagrafica&cliente=' + encodeURIComponent(name));
+    const json = await res.json();
+    if (json.status === 'ok' && json.data) {
+      currentAnagrafica = json.data;
+      showAnagraficaBar();
+    } else {
+      currentAnagrafica = null;
+      document.getElementById('anagrafica-bar').style.display = 'none';
+      document.getElementById('anagrafica-form').style.display = 'block';
+    }
+  } catch(e) {
+    currentAnagrafica = null;
+  }
+}
+
+// ══════════════════════════════════════════════
 // SAVE SESSION
 // ══════════════════════════════════════════════
 async function saveSession() {
@@ -465,7 +549,7 @@ async function saveSession() {
   const errors = [];
   if (!name) errors.push('Nome cliente obbligatorio');
   if (!dateVal) errors.push('Data sessione obbligatoria');
-  if (!scriptUrl) errors.push('Configura prima l\'URL script nel tab Setup');
+  if (!scriptUrl) errors.push("Configura prima l'URL script nel tab Setup");
 
   const vbox = document.getElementById('val-box');
   const vlist = document.getElementById('val-list');
@@ -476,17 +560,38 @@ async function saveSession() {
   }
   vbox.classList.remove('show');
 
-  const row = { cliente: name, data: isoToIT(dateVal), note: document.getElementById('f-note').value.trim() };
-  ALL.forEach(f => {
-    const v = document.getElementById(f.id).value;
-    row[f.key] = v !== '' ? parseFloat(v) : '';
-  });
-
   const btn = document.getElementById('savebtn');
   btn.textContent = 'Salvataggio...';
   btn.disabled = true;
 
   try {
+    // 1. Salva anagrafica se il form è visibile
+    const anaForm = document.getElementById('anagrafica-form');
+    if (anaForm.style.display !== 'none') {
+      const dobVal = document.getElementById('f-dob').value;
+      const heightVal = document.getElementById('f-height').value;
+      if (dobVal || heightVal) {
+        const anaRow = {
+          cliente: name,
+          data_nascita: dobVal ? isoToIT(dobVal) : '',
+          altezza: heightVal ? parseInt(heightVal) : '',
+        };
+        await fetch(scriptUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'saveAnagrafica', data: anaRow }),
+        });
+        currentAnagrafica = anaRow;
+        showAnagraficaBar();
+      }
+    }
+
+    // 2. Salva sessione
+    const row = { cliente: name, data: isoToIT(dateVal), note: document.getElementById('f-note').value.trim() };
+    ALL.forEach(f => {
+      const v = document.getElementById(f.id).value;
+      row[f.key] = v !== '' ? parseFloat(v) : '';
+    });
+
     const res = await fetch(scriptUrl, {
       method: 'POST',
       body: JSON.stringify({ action: 'save', data: row }),
@@ -522,18 +627,32 @@ function clearForm(keepName) {
 async function loadHistory() {
   const name = document.getElementById('s-name').value.trim();
   if (!name) { toast('Inserisci il nome del cliente', 'err'); return; }
-  if (!scriptUrl) { toast('Configura prima l\'URL script nel tab Setup', 'err'); return; }
+  if (!scriptUrl) { toast("Configura prima l'URL script nel tab Setup", 'err'); return; }
 
   toast('Caricamento...', '');
 
   try {
-    const res = await fetch(scriptUrl + '?action=get&cliente=' + encodeURIComponent(name));
-    const json = await res.json();
-    if (json.status !== 'ok') { toast('Errore: '+(json.message||'?'),'err'); return; }
+    // Carica anagrafica e sessioni in parallelo
+    const [resS, resA] = await Promise.all([
+      fetch(scriptUrl + '?action=get&cliente=' + encodeURIComponent(name)),
+      fetch(scriptUrl + '?action=getAnagrafica&cliente=' + encodeURIComponent(name)),
+    ]);
+    const jsonS = await resS.json();
+    const jsonA = await resA.json();
 
-    clientSessions = (json.data || []).sort((a,b) => parseITDate(a.data) - parseITDate(b.data));
+    if (jsonS.status !== 'ok') { toast('Errore: '+(jsonS.message||'?'),'err'); return; }
+
+    clientSessions = (jsonS.data || []).sort((a,b) => parseITDate(a.data) - parseITDate(b.data));
     currentClient = name;
     addKnownClient(name);
+
+    // Aggiorna anagrafica anche nel tab Nuova
+    if (jsonA.status === 'ok' && jsonA.data) {
+      currentAnagrafica = jsonA.data;
+      document.getElementById('f-name').value = name;
+      showAnagraficaBar();
+    }
+
     updateTopbar();
     renderStorico();
     toast(`${clientSessions.length} sessioni caricate ✓`, 'ok');
